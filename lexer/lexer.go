@@ -31,6 +31,13 @@ func (l *Lexer) readChar() {
 	l.readPosition += 1 //结束，保证readPosition始终在position前面一个字符
 }
 
+func (l *Lexer) peerChar() byte {
+	if l.readPosition >= len(l.input) {
+		return 0
+	} else {
+		return l.input[l.readPosition]
+	}
+}
 func (l *Lexer) unreadChar() { //回退向前看字符
 	if l.position == 0 {
 		l.ch = 0
@@ -70,6 +77,21 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.PLUS, l.ch)
 	case '-':
 		tok = newToken(token.MINUS, l.ch)
+	case '/':
+		tok = newToken(token.SLASH, l.ch)
+	case '*':
+		tok = newToken(token.ASTERISK, l.ch)
+	case '!':
+		tok = newToken(token.BANG, l.ch)
+		if l.input[l.readPosition] == '=' { //如果下一个字符是=
+			tok = token.Token{Type: token.NOT_EQ, Literal: "!="}
+			l.readChar()
+		}
+	case '<':
+		tok = newToken(token.LT, l.ch)
+	case '>':
+		tok = newToken(token.GT, l.ch)
+
 	case 0: //0表示字符串的末尾
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -82,8 +104,8 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Literal = l.readNumber()
 			tok.Type = token.INT
 			return tok
-		} else if l.ch == ' ' || l.ch == '\n' || l.ch == '\t' {
-			break
+		} else {
+			tok = newToken(token.ILLEGAL, l.ch)
 		}
 	}
 	l.readChar()
