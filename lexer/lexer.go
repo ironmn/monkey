@@ -42,12 +42,11 @@ func (l *Lexer) unreadChar() { //回退向前看字符
 }
 
 func (l *Lexer) NextToken() token.Token {
-	for l.ch == ' ' || l.ch == '\n' || l.ch == '\b' || l.ch == '\t' { //吸收空字符
+	for l.ch == ' ' || l.ch == '\n' || l.ch == '\b' || l.ch == '\t' || l.ch == '\r' { //吸收空字符
 		l.readChar()
 	}
 	fmt.Print(l.ch)
 	var tok token.Token
-	var literal string
 	switch l.ch {
 	case '=':
 		tok = newToken(token.ASSIGN, l.ch)
@@ -80,11 +79,9 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Type = token.LookupIdent(tok.Literal)
 			return tok
 		} else if isNumber(l.ch) { //如果是number开头的，默认其为INT类型
-			for ; isNumber(l.ch); l.readChar() {
-				literal += string(l.ch)
-			}
-			l.unreadChar()
-			tok = token.Token{Type: token.INT, Literal: literal}
+			tok.Literal = l.readNumber()
+			tok.Type = token.INT
+			return tok
 		} else if l.ch == ' ' || l.ch == '\n' || l.ch == '\t' {
 			break
 		}
@@ -112,4 +109,12 @@ func isNumber(ch byte) bool {
 		return true
 	}
 	return false
+}
+
+func (l *Lexer) readNumber() string {
+	position := l.position
+	for isNumber(l.ch) {
+		l.readChar()
+	}
+	return l.input[position:l.position]
 }
