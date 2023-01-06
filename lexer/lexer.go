@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"fmt"
 	"monkey/token"
 )
 
@@ -30,11 +31,30 @@ func (l *Lexer) readChar() {
 	l.readPosition += 1 //结束，保证readPosition始终在position前面一个字符
 }
 
+func (l *Lexer) unreadChar() { //回退向前看字符
+	if l.position == 0 {
+		l.ch = 0
+		return
+	}
+	l.ch = l.input[l.readPosition]
+	l.readPosition = l.position
+	l.position -= 1
+}
+
 func (l *Lexer) NextToken() token.Token {
+	for l.ch == ' ' || l.ch == '\n' || l.ch == '\b' || l.ch == '\t' { //吸收空字符
+		l.readChar()
+	}
+	fmt.Print(l.ch)
 	var tok token.Token
+	var literal string
 	switch l.ch {
 	case '=':
 		tok = newToken(token.ASSIGN, l.ch)
+		if l.input[l.readPosition] == '=' { //如果下一个字符依然是=
+			tok = token.Token{Type: token.EQ, Literal: "=="}
+			l.readChar()
+		}
 	case ';':
 		tok = newToken(token.SEMICOLON, l.ch)
 	case '(':
@@ -54,6 +74,29 @@ func (l *Lexer) NextToken() token.Token {
 	case 0: //0表示字符串的末尾
 		tok.Literal = ""
 		tok.Type = token.EOF
+	default:
+		if isLetter(l.ch) { //如果是英文字符开头
+			for ; isLetter(l.ch) || isNumber(l.ch) || l.ch == '_'; l.readChar() {
+				literal += string(l.ch) //一直读取字符
+			}
+			l.unreadChar()
+			switch literal {
+			case "let": //let关键字
+				tok = token.Token{Type: token.LET, Literal: literal}
+			case "fn": //fn关键字
+				tok = token.Token{Type: token.FUNCTION, Literal: literal}
+			default: //
+				tok = token.Token{Type: token.IDENT, Literal: literal}
+			}
+		} else if isNumber(l.ch) { //如果是number开头的，默认其为INT类型
+			for ; isNumber(l.ch); l.readChar() {
+				literal += string(l.ch)
+			}
+			l.unreadChar()
+			tok = token.Token{Type: token.INT, Literal: literal}
+		} else if l.ch == ' ' || l.ch == '\n' || l.ch == '\t' {
+			break
+		}
 	}
 	l.readChar()
 	return tok
@@ -61,4 +104,18 @@ func (l *Lexer) NextToken() token.Token {
 
 func newToken(tokenType token.TokenType, ch byte) token.Token {
 	return token.Token{Type: tokenType, Literal: string(ch)}
+}
+
+func isLetter(ch byte) bool {
+	if ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch == '_' {
+		return true
+	}
+	return false
+}
+
+func isNumber(ch byte) bool {
+	if ch >= '0' && ch <= '9' {
+		return true
+	}
+	return false
 }
