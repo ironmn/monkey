@@ -76,18 +76,9 @@ func (l *Lexer) NextToken() token.Token {
 		tok.Type = token.EOF
 	default:
 		if isLetter(l.ch) { //如果是英文字符开头
-			for ; isLetter(l.ch) || isNumber(l.ch) || l.ch == '_'; l.readChar() {
-				literal += string(l.ch) //一直读取字符
-			}
-			l.unreadChar()
-			switch literal {
-			case "let": //let关键字
-				tok = token.Token{Type: token.LET, Literal: literal}
-			case "fn": //fn关键字
-				tok = token.Token{Type: token.FUNCTION, Literal: literal}
-			default: //
-				tok = token.Token{Type: token.IDENT, Literal: literal}
-			}
+			tok.Literal = l.readIdentifier()
+			tok.Type = token.LookupIdent(tok.Literal)
+			return tok
 		} else if isNumber(l.ch) { //如果是number开头的，默认其为INT类型
 			for ; isNumber(l.ch); l.readChar() {
 				literal += string(l.ch)
@@ -107,12 +98,15 @@ func newToken(tokenType token.TokenType, ch byte) token.Token {
 }
 
 func isLetter(ch byte) bool {
-	if ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch == '_' {
-		return true
-	}
-	return false
+	return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch == '_'
 }
-
+func (l *Lexer) readIdentifier() string {
+	position := l.position
+	for isLetter(l.ch) {
+		l.readChar()
+	}
+	return l.input[position:l.position]
+}
 func isNumber(ch byte) bool {
 	if ch >= '0' && ch <= '9' {
 		return true
