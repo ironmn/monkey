@@ -19,6 +19,18 @@ const (
 	CALL        //add(x+y)
 )
 
+//添加优先级表
+var precedences = map[token.TokenType]int{
+	token.EQ:       EQUALS,
+	token.NOT_EQ:   EQUALS,
+	token.LT:       LESSGREATER,
+	token.GT:       LESSGREATER,
+	token.PLUS:     SUM,
+	token.MINUS:    SUM,
+	token.SLASH:    PRODUCT,
+	token.ASTERISK: PRODUCT,
+}
+
 //定义前缀函数和中缀函数，并设置这两种之间的关联（通过参数传递）
 type (
 	prefixParseFn func() ast.Expression
@@ -79,6 +91,20 @@ func (p *Parser) Errors() []string {
 func (p *Parser) peekError(t token.TokenType) {
 	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peerToken.Type)
 	p.errors = append(p.errors, msg)
+}
+
+func (p *Parser) peekPrecedence() int {
+	if ans, ok := precedences[p.peerToken.Type]; ok {
+		return ans
+	}
+	return LOWEST
+}
+
+func (p *Parser) curPrecedence() int {
+	if ans, ok := precedences[p.curToken.Type]; ok {
+		return ans
+	}
+	return LOWEST
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
