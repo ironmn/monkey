@@ -63,7 +63,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
-
+	p.registerPrefix(token.TRUE, p.parseBoolean)
+	p.registerPrefix(token.FALSE, p.parseBoolean)
 	//关联infix函数
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -250,4 +251,8 @@ func (p *Parser) parseInfixExpression(leftExp ast.Expression) ast.Expression {
 	p.nextToken()                                    //由于已经完成了左值的读取，那么就需要继续获取下一个词法单元
 	expression.Right = p.parseExpression(precedence) //使用expression的表达式优先级作为获取右值的参数
 	return expression
+}
+
+func (p *Parser) parseBoolean() ast.Expression {
+	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
 }
