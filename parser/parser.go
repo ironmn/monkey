@@ -65,6 +65,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
 	p.registerPrefix(token.TRUE, p.parseBoolean)
 	p.registerPrefix(token.FALSE, p.parseBoolean)
+	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	//关联infix函数
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -255,4 +256,16 @@ func (p *Parser) parseInfixExpression(leftExp ast.Expression) ast.Expression {
 
 func (p *Parser) parseBoolean() ast.Expression {
 	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
+}
+
+func (p *Parser) parseGroupedExpression() ast.Expression {
+	p.nextToken()
+
+	exp := p.parseExpression(LOWEST) //由于parseExpression这个函数内部也有递归函数，同时所有的递归函数中，传递优先级的参数只会增加不会减少，能够控制
+	//这个优先级参数参数的方式就是在外部调用的时候传递一个优先级参数。当遇到左括号的时候，就强制调用一个新的parseExpression递归函数，由于递归程序的执行顺序是永远先于for循环的，因此这里能够顺利地得到结果。
+
+	if !p.expectPeek(token.RPAREN) { //如果没有遇到右括号，则说明出现了语法错误
+		return nil //返回一个空的值
+	}
+	return exp
 }
