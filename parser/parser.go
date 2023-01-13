@@ -206,13 +206,17 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 	leftExp := prefix()
 
-	for !p.peerTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
+	//for循环的作用在于，能够结合连续的同等优先级的，并且大于当前precedence的项（如a + b * c * d）
+	//使用递归能够让每一个高优先级的项先于for循环进行结合，然后再通过for循环将回溯的结果进行结合
+	for !p.peerTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() { //这个比较判断语句的意思是，如果当前表达式的运算符优先级低于下一个运算符的优先级，那么就需要将当前的右值进行右结合，而非左结合
+		//如果precedence>p.peekPrecedence，那么说明当前运算符的左结合能力大于下一个运算符的右结合能力，所以不能将当前右值和下一个左值进行结合。
+		//这个过程实质上是根据优先级的大小进行对语法树进行中序遍历，将遍历的结果存放在expression对象中
 		infix := p.infixParseFns[p.peerToken.Type]
 		if infix == nil { //如果发现没有对应的infix函数，就直接返回左值
 			return leftExp
 		}
 		p.nextToken()
-		leftExp = infix(leftExp)
+		leftExp = infix(leftExp) //递归函数的作用主要是用来结合更高优先级的项
 	}
 	return leftExp
 }
@@ -242,7 +246,8 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 
 func (p *Parser) parseInfixExpression(leftExp ast.Expression) ast.Expression {
 	expression := &ast.InfixExpression{Token: p.curToken, Left: leftExp, Operator: p.curToken.Literal}
-	p.nextToken()                                                            //由于已经完成了左值的读取，那么就需要继续获取下一个词法单元
-	expression.Right = p.parseExpression(precedences[expression.Token.Type]) //使用expression的表达式优先级作为获取右值的参数
+	precedence := p.curPrecedence()
+	p.nextToken()                                    //由于已经完成了左值的读取，那么就需要继续获取下一个词法单元
+	expression.Right = p.parseExpression(precedence) //使用expression的表达式优先级作为获取右值的参数
 	return expression
 }
