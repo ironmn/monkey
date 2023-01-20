@@ -66,6 +66,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.TRUE, p.parseBoolean)
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
+	p.registerPrefix(token.IF, p.parseIfExpression)
 	//关联infix函数
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -268,4 +269,35 @@ func (p *Parser) parseGroupedExpression() ast.Expression {
 		return nil //返回一个空的值
 	}
 	return exp
+}
+
+func (p *Parser) parseIfExpression() ast.Expression {
+	expression := &ast.IfExpression{Token: p.curToken}
+	if !p.expectPeek(token.LPAREN) { //如果不是左括号，则说明语法分析出现了错误，暂时返回nil
+		return nil
+	}
+	p.nextToken()                                    //将词法指针移动到表达式的开头
+	expression.Condition = p.parseExpression(LOWEST) //去解析IF语句里面的表达式
+	if !p.expectPeek(token.RPAREN) {                 //解析完条件表达式之后，如果遇到的不是右括号，则说明语法分析器出现了问题，返回nil
+		return nil
+	}
+
+	if !p.expectPeek(token.LBRACE) { //如果不是左大括号
+		return nil
+	}
+
+	expression.Consequence = p.parseBlockStatement()
+
+	return expression
+}
+
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	blockStatements := &ast.BlockStatement{Token: p.curToken} //设置左大括号为该语法单元的词法标记
+	p.nextToken()
+	for !p.curTokenIs(token.RBRACE) && !p.curTokenIs(token.EOF) {
+		statement := p.parseStatement()
+		blockStatements.Statements = append(blockStatements.Statements, statement)
+		p.nextToken()
+	}
+	return blockStatements
 }
