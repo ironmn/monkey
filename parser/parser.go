@@ -29,6 +29,7 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.SLASH:    PRODUCT,
 	token.ASTERISK: PRODUCT,
+	token.LPAREN:   CALL,
 }
 
 //定义前缀函数和中缀函数，并设置这两种之间的关联（通过参数传递）
@@ -78,6 +79,9 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.LT, p.parseInfixExpression)
 	p.registerInfix(token.EQ, p.parseInfixExpression)
 	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
+
+	//这里需要为调用表达式的左括号设置一个中缀调用的函数，因为在解析调用函数的时候，词法分析器只能够识别标识符，无法确定这个标识符代表的究竟是变量还是函数。
+	p.registerInfix(token.LPAREN, p.parseCallExpression)
 	return p
 }
 
@@ -350,4 +354,33 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 	}
 
 	return ids
+}
+
+func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
+	exp := &ast.CallExpression{Token: p.curToken, Function: function}
+	exp.Arguments = p.parseCallArguments()
+	return exp
+}
+
+func (p *Parser) parseCallArguments() []ast.Expression {
+	args := []ast.Expression{}
+
+	if p.peerTokenIs(token.RPAREN) { //空参列表的边界调用
+		p.nextToken()
+		return args
+	}
+
+	p.nextToken()
+	args = append(args, p.parseExpression(LOWEST))
+
+	for p.peerTokenIs(token.COMMA) { //判断是否符合参数列表的条件要求
+		p.nextToken()
+		p.nextToken()
+		args = append(args, p.parseExpression(LOWEST))
+	}
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	} //如果不是，那么就返回nil
+	return args
+
 }
