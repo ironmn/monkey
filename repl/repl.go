@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"monkey/lexer"
-	"monkey/token"
+	"monkey/parser"
 )
 
 const PROMPT = ">> "
@@ -21,9 +21,38 @@ func Start(in io.Reader, out io.Writer) {
 		}
 		line := scanner.Text()
 		l := lexer.New(line)
+		p := parser.New(l)
+		program := p.ParseProgram()
 
-		for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
-			fmt.Fprintf(out, "%+v\n", tok)
+		if len(p.Errors()) != 0 {
+			printParseErrors(out, p.Errors())
+			continue
 		}
+
+		io.WriteString(out, program.String())
+		io.WriteString(out, "\n")
 	}
 }
+
+func printParseErrors(out io.Writer, errors []string) {
+	io.WriteString(out, MONKEY_FACE)
+	io.WriteString(out, "Woops!something goes wrong.")
+	io.WriteString(out, " parse errors: \n")
+	for _, msg := range errors {
+
+		io.WriteString(out, "\t"+msg+"\t")
+	}
+}
+
+const MONKEY_FACE = `            __,__
+   .--.  .-"     "-.  .--.
+  / .. \/  .-. .-.  \/ .. \
+ | |  '|  /   Y   \  |'  | |
+ | \   \  \ 0 | 0 /  /   / |
+  \ '- ,\.-"""""""-./, -' /
+   ''-' /_   ^ ^   _\ '-''
+       |  \._   _./  |
+       \   \ '~' /   /
+        '._ '-=-' _.'
+           '-----'
+`
