@@ -161,8 +161,11 @@ func (p *Parser) parseLetStatement() *ast.LetStatement { //关于这里为什么
 	if !p.expectPeek(token.ASSIGN) {
 		return nil
 	}
-	//@todo: 跳过对表达式的解析
-	for !p.curTokenIs(token.SEMICOLON) {
+
+	//重新回到前面，添加对于普通的表达式值的解析
+	p.nextToken()
+	stmt.Value = p.parseExpression(LOWEST)
+	if p.peerTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
 	return stmt
@@ -172,7 +175,8 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 	p.nextToken()
 	//@todo: 跳过对于表达式的解析
-	for !p.curTokenIs(token.SEMICOLON) {
+	stmt.ReturnValue = p.parseExpression(LOWEST)
+	if p.peerTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
 	return stmt
