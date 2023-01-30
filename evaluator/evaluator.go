@@ -25,8 +25,53 @@ func Eval(node ast.Node) object.Object {
 	case *ast.PrefixExpression:
 		right := Eval(node.Right)
 		return evalPrefixExpression(node.Operator, right)
+	case *ast.InfixExpression:
+		left := Eval(node.Left)
+		right := Eval(node.Right)
+		return evalInfixExpression(node.Operator, left, right)
 	}
 	return nil
+}
+
+func evalInfixExpression(operator string, left object.Object, right object.Object) object.Object {
+	switch {
+	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
+		return evalIntegerInfixExpression(operator, left, right)
+
+	case operator == "==": //TODO: 修改这里的判断条件，只允许bool类型进行相等和不相等的匹配运算
+		return nativeBoolToBooleanObject(left.(*object.Boolean).Value == right.(*object.Boolean).Value)
+	case operator == "!=":
+		return nativeBoolToBooleanObject(left.(*object.Boolean).Value != right.(*object.Boolean).Value)
+	default:
+		return NULL
+	}
+}
+
+func evalIntegerInfixExpression(operator string, left object.Object, right object.Object) object.Object {
+	leftVal := left.(*object.Integer).Value
+	rightVal := right.(*object.Integer).Value
+	switch operator {
+	case "+":
+		return &object.Integer{Value: leftVal + rightVal}
+	case "-":
+		return &object.Integer{Value: leftVal - rightVal}
+	case "*":
+		return &object.Integer{Value: leftVal * rightVal}
+	case "/":
+		return &object.Integer{Value: leftVal / rightVal}
+
+	case "<":
+		return &object.Boolean{Value: leftVal < rightVal}
+	case ">":
+		return &object.Boolean{Value: leftVal > rightVal}
+	case "==":
+		return &object.Boolean{Value: leftVal == rightVal}
+	case "!=":
+		return &object.Boolean{Value: leftVal != rightVal}
+	default:
+		return NULL
+	}
+
 }
 
 func evalPrefixExpression(operator string, right object.Object) object.Object {
